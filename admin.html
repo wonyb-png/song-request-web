@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>노래 신청 관리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const SongAdminPanel = () => {
+            const [requests, setRequests] = useState([]);
+            const [loading, setLoading] = useState(false);
+
+            const FIREBASE_CONFIG = {
+                databaseURL: "https://music-request-web-default-rtdb.firebaseio.com/"
+            };
+
+            const sampleData = [
+                {
+                    id: '1',
+                    artist: '아이유',
+                    title: '좋은 날',
+                    timestamp: new Date().toISOString(),
+                    checked: false
+                }
+            ];
+
+            useEffect(() => {
+                loadRequests();
+                const interval = setInterval(loadRequests, 5000);
+                return () => clearInterval(interval);
+            }, []);
+
+            const loadRequests = async () => {
+                setLoading(true);
+                try {
+                    const response = await fetch(`${FIREBASE_CONFIG.databaseURL}/requests.json`);
+                    const data = await response.json();
+                    
+                    if (data) {
+                        const requestsArray = Object.entries(data).map(([id, value]) => ({ 
+                            id, 
+                            ...value 
+                        }));
+                        requestsArray.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                        setRequests(requestsArray);
+                    } else {
+                        setRequests([]);
+                    }
+                    setLoading(false);
+                } catch (error) {
+                    console.error('데이터 로드 실패:', error);
+                    setRequests(sampleData);
+                    setLoading(false);
+                }
+            };
+
+            const toggleCheck = async (id) => {
+                try {
+                    const request = requests.find(r => r.id === id);
+                    const newCheckedState = !request.checked;
+                    
+                    const updatedRequests = requests.map(req => 
+                        req.id === id ? { ...req, checked: newCheckedState } : req
+                    );
+                    setRequests(updatedRequests);
+
+                    await fetch(`${FIREBASE_CONFIG.databaseURL}/requests/${id}.json`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ checked: newCheckedState })
+                    });
+                } catch (error) {
+                    console.error('체크 업데이트 실패:', error);
+                    loadRequests();
+                }
+            };
+
+            const formatTime = (timestamp) => {
+                const date = new Date(timestamp);
+                return date.toLocaleString('ko-KR', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+
+            const pendingRequests = requests.filter(req => !req.checked);
+            const checkedRequests = requests.filter(req => req.checked);
+
+            return (
+                <div className="min-h-screen bg-gray-100 p-6">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center">
+                                <svg className="w-8 h-8 text-purple-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                                </svg>
+                                <h1 className="text-2xl font-bold text-gray-800">노래 신청 관리</h1>
+                            </div>
+                            <button
+                                onClick={loadRequests}
+                                className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                disabled={loading}
+                            >
+                                <svg className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                새로고침
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* 대기 중인 곡 */}
+                            <div className="bg-white rounded-lg shadow-lg p-6">
+                                <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                    <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                                    대기 중 ({pendingRequests.length})
+                                </h2>
+                                <div className="space-y-3">
+                                    {pendingRequests.length === 0 ? (
+                                        <div className="text-center py-12 text-gray-400">
+                                            <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                                            </svg>
+                                            <p>대기 중인 곡이 없습니다</p>
+                                        </div>
+                                    ) : (
+                                        pendingRequests.map((req, index) => (
+                                            <div
+                                                key={req.id}
+                                                className="bg-white border-2 border-gray-200 rounded-lg p-4 flex items-center gap-4 hover:border-purple-300 transition-all"
+                                            >
+                                                <button
+                                                    onClick={() => toggleCheck(req.id)}
+                                                    className="flex-shrink-0 w-8 h-8 rounded-lg border-2 border-gray-300 hover:border-purple-400 hover:bg-purple-50 flex items-center justify-center transition-all"
+                                                >
+                                                </button>
+
+                                                <div className="flex-shrink-0 w-8 text-center">
+                                                    <span className="text-lg font-bold text-purple-600">
+                                                        {index + 1}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex-1">
+                                                    <h3 className="font-bold text-lg text-gray-800">
+                                                        {req.title}
+                                                    </h3>
+                                                    <p className="text-gray-600">
+                                                        {req.artist}
+                                                    </p>
+                                                </div>
+
+                                                <div className="text-right">
+                                                    <p className="text-sm text-gray-400">{formatTime(req.timestamp)}</p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* 재생 완료된 곡 */}
+                            <div className="bg-white rounded-lg shadow-lg p-6">
+                                <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                    <span className="w-3 h-3 bg-gray-400 rounded-full mr-2"></span>
+                                    재생 완료 ({checkedRequests.length})
+                                </h2>
+                                <div className="space-y-3">
+                                    {checkedRequests.length === 0 ? (
+                                        <div className="text-center py-12 text-gray-400">
+                                            <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            <p>재생 완료된 곡이 없습니다</p>
+                                        </div>
+                                    ) : (
+                                        checkedRequests.map((req) => (
+                                            <div
+                                                key={req.id}
+                                                className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4 flex items-center gap-4"
+                                            >
+                                                <button
+                                                    onClick={() => toggleCheck(req.id)}
+                                                    className="flex-shrink-0 w-8 h-8 rounded-lg bg-purple-600 border-2 border-purple-600 hover:bg-purple-700 flex items-center justify-center transition-all"
+                                                >
+                                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+
+                                                <div className="flex-1">
+                                                    <h3 className="font-bold text-lg text-gray-400">
+                                                        {req.title}
+                                                    </h3>
+                                                    <p className="text-gray-400">
+                                                        {req.artist}
+                                                    </p>
+                                                </div>
+
+                                                <div className="text-right">
+                                                    <p className="text-sm text-gray-400">{formatTime(req.timestamp)}</p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h3 className="font-bold text-blue-900 mb-2">💡 사용 팁</h3>
+                            <p className="text-sm text-blue-800">
+                                왼쪽 대기 중인 곡을 체크하면 오른쪽 재생 완료 목록으로 이동합니다. 
+                                재생 완료 목록의 X 버튼을 누르면 다시 대기 목록으로 돌아갑니다.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<SongAdminPanel />, document.getElementById('root'));
+    </script>
+</body>
+</html>
