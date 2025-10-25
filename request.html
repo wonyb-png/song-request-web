@@ -62,10 +62,10 @@
                         setTitle('');
                         setTimeout(() => setShowMessage(false), 3000);
                     } else {
-                        throw new Error('Firebase 저장 실패');
+                        throw new Error('Firebase 저장 실패. 다시 시도 해주세요.');
                     }
                 } catch (error) {
-                    setMessage('❌ 오류가 발생했습니다. Firebase 설정을 확인해주세요.');
+                    setMessage('❌ 오류가 발생했습니다. Firebase 설정을 확인해주세요. 다시 시도 해주세요.');
                     setShowMessage(true);
                     console.error(error);
                     setTimeout(() => setShowMessage(false), 3000);
@@ -94,7 +94,7 @@
                                     value={artist}
                                     onChange={(e) => setArtist(e.target.value)}
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                    placeholder="예: 아이유"
+                                    placeholder="예: 싸이(PSY)"
                                     disabled={loading}
                                 />
                             </div>
@@ -108,7 +108,7 @@
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                    placeholder="예: 좋은 날"
+                                    placeholder="예: 예술이야야"
                                     disabled={loading}
                                     onKeyPress={(e) => e.key === 'Enter' && submitRequest()}
                                 />
@@ -149,7 +149,7 @@
                         </div>
 
                         <div className="mt-6 text-center text-sm text-gray-500">
-                            <p>신청하신 노래는 순서대로 재생됩니다</p>
+                            <p>신청하신 노래는 검증 후 재생됩니다</p>
                         </div>
                     </div>
                 </div>
