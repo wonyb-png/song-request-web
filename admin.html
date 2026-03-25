@@ -21,8 +21,8 @@
             const [loading, setLoading] = useState(false);
             const [showDeleteModal, setShowDeleteModal] = useState(false);
             const [deleteTarget, setDeleteTarget] = useState(null);
-            const [deleteType, setDeleteType] = useState('single'); // 'single' or 'bulk'
-            const [sortOrder, setSortOrder] = useState('newest'); // 'newest' or 'oldest'
+            const [deleteType, setDeleteType] = useState('single');
+            const [sortOrder, setSortOrder] = useState('newest');
             const [showAllPending, setShowAllPending] = useState(false);
             const [showAllCompleted, setShowAllCompleted] = useState(false);
 
@@ -99,6 +99,7 @@
             };
 
             const deleteAllCompleted = () => {
+                const checkedRequests = requests.filter(req => req.checked);
                 if (checkedRequests.length === 0) {
                     alert('재생 완료된 곡이 없습니다.');
                     return;
@@ -110,13 +111,12 @@
             const confirmDelete = async () => {
                 try {
                     if (deleteType === 'single') {
-                        // 단일 삭제
                         await fetch(`${FIREBASE_CONFIG.databaseURL}/requests/${deleteTarget}.json`, {
                             method: 'DELETE'
                         });
                         setRequests(requests.filter(req => req.id !== deleteTarget));
                     } else {
-                        // 일괄 삭제
+                        const checkedRequests = requests.filter(req => req.checked);
                         const deletePromises = checkedRequests.map(req =>
                             fetch(`${FIREBASE_CONFIG.databaseURL}/requests/${req.id}.json`, {
                                 method: 'DELETE'
@@ -148,8 +148,26 @@
                 });
             };
 
-            const pendingRequests = requests.filter(req => !req.checked);
-            const checkedRequests = requests.filter(req => req.checked);
+            // 정렬 적용
+            const sortedRequests = [...requests].sort((a, b) => {
+                if (sortOrder === 'newest') {
+                    return new Date(b.timestamp) - new Date(a.timestamp);
+                } else {
+                    return new Date(a.timestamp) - new Date(b.timestamp);
+                }
+            });
+
+            const pendingRequests = sortedRequests.filter(req => !req.checked);
+            const checkedRequests = sortedRequests.filter(req => req.checked);
+
+            // 더보기 적용
+            const ITEMS_PER_PAGE = 20;
+            const displayedPending = showAllPending 
+                ? pendingRequests 
+                : pendingRequests.slice(0, ITEMS_PER_PAGE);
+            const displayedCompleted = showAllCompleted 
+                ? checkedRequests 
+                : checkedRequests.slice(0, ITEMS_PER_PAGE);
 
             const deleteSongInfo = deleteTarget 
                 ? requests.find(r => r.id === deleteTarget)
