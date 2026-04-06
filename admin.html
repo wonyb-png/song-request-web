@@ -99,8 +99,8 @@
             };
 
             const deleteAllCompleted = () => {
-                const checkedRequests = requests.filter(req => req.checked);
-                if (checkedRequests.length === 0) {
+                const currentCheckedRequests = requests.filter(req => req.checked);
+                if (currentCheckedRequests.length === 0) {
                     alert('재생 완료된 곡이 없습니다.');
                     return;
                 }
@@ -116,8 +116,8 @@
                         });
                         setRequests(requests.filter(req => req.id !== deleteTarget));
                     } else {
-                        const checkedRequests = requests.filter(req => req.checked);
-                        const deletePromises = checkedRequests.map(req =>
+                        const currentCheckedRequests = requests.filter(req => req.checked);
+                        const deletePromises = currentCheckedRequests.map(req =>
                             fetch(`${FIREBASE_CONFIG.databaseURL}/requests/${req.id}.json`, {
                                 method: 'DELETE'
                             })
